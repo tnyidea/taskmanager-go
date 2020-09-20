@@ -2,12 +2,12 @@ package test
 
 import (
 	"database/sql"
-	"github.com/tnyidea/taskmanager-go"
+	"github.com/tnyidea/taskmanager-go/taskmanager"
 	"log"
 	"testing"
 )
 
-var testDefaultWorkflow = taskmanager.DefaultTaskWorkflow()
+var testDefaultWorkflow = taskmanager.taskmanager.DefaultTaskWorkflow()
 
 var testTask = taskmanager.Task{
 	Id:          0,
