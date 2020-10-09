@@ -56,7 +56,8 @@ func (m *TaskManager) StartTask(id int, w TaskWorkflow) error {
 		return errors.New(errMessage)
 	}
 
-	w.CacheTaskProperties(task.Id, task.Properties)
+	w.Cache.TaskId = task.Id
+	w.Cache.TaskProperties = task.Properties
 
 	statusHandlers := w.Handlers["Created"]
 	for i := range statusHandlers {

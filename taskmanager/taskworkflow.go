@@ -8,8 +8,8 @@ import (
 type TaskWorkflow struct {
 	ContextProperties interface{} `json:"contextProperties"`
 	Cache             struct {
-		TaskId         int         `json:"taskId"`
-		TaskProperties interface{} `json:"taskProperties"`
+		TaskId         int    `json:"taskId"`
+		TaskProperties []byte `json:"taskProperties"`
 	} `json:"cache"`
 	Sequence []string                         `json:"sequence"`
 	Timeouts map[string]int                   `json:"timeouts"`
@@ -59,11 +59,6 @@ func DefaultTaskWorkflow() TaskWorkflow {
 			},
 		},
 	}
-}
-
-func (w *TaskWorkflow) CacheTaskProperties(id int, properties interface{}) {
-	w.Cache.TaskId = id
-	w.Cache.TaskProperties = properties
 }
 
 func NextStatus(w TaskWorkflow, id int) error {
