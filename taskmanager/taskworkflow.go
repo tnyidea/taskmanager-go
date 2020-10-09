@@ -11,10 +11,12 @@ type TaskWorkflow struct {
 		TaskId         int         `json:"taskId"`
 		TaskProperties interface{} `json:"taskProperties"`
 	} `json:"cache"`
-	Sequence []string                                                `json:"sequence"`
-	Timeouts map[string]int                                          `json:"timeouts"`
-	Handlers map[string][]func(id int, properties interface{}) error `json:"handlers"`
+	Sequence []string                         `json:"sequence"`
+	Timeouts map[string]int                   `json:"timeouts"`
+	Handlers map[string][]TaskWorkflowHandler `json:"handlers"`
 }
+
+type TaskWorkflowHandler func(w TaskWorkflow, id int, properties interface{}) error
 
 func (w *TaskWorkflow) Bytes() []byte {
 	b, _ := json.Marshal(w)
@@ -35,7 +37,7 @@ func DefaultTaskWorkflow() TaskWorkflow {
 		Timeouts: map[string]int{
 			"Created": -1, "Active": 300, "Waiting": -1, "Complete": -1, "Error": -1, "Timeout": -1,
 		},
-		Handlers: map[string][]func(id int, properties interface{}) error{
+		Handlers: map[string][]TaskWorkflowHandler{
 			"Created": {
 				defaultCreateLogMessage,
 				NextStatus,
@@ -59,49 +61,49 @@ func DefaultTaskWorkflow() TaskWorkflow {
 	}
 }
 
-func (w *TaskWorkflow) CacheTaskProperties(id int, properties interface{}) {
+func CacheTaskProperties(w TaskWorkflow, id int, properties interface{}) {
 	w.Cache.TaskId = id
 	w.Cache.TaskProperties = properties
 }
 
-func NextStatus(id int, properties interface{}) error {
+func NextStatus(w TaskWorkflow, id int, properties interface{}) error {
 	// NoOp Function to tell the workflow to increment task state in sequence
 	return nil
 }
 
-func EndWorkflow(id int, properties interface{}) error {
+func EndWorkflow(w TaskWorkflow, id int, properties interface{}) error {
 	// NoOp Function to tell the workflow to end processing
 	return nil
 }
 
 // TODO Add a Wait status to the task manager that must be part of the workflow
 // TODO This Wait status must be part of the workflow -- if not it will be an error
-func WaitForNotify(id int, properties interface{}) error {
+func WaitForNotify(w TaskWorkflow, id int, properties interface{}) error {
 	// NoOp Function to tell the workflow to do nothing and wait to resume or end
 	return nil
 }
 
-func defaultCreateLogMessage(id int, properties interface{}) error {
+func defaultCreateLogMessage(w TaskWorkflow, id int, properties interface{}) error {
 	log.Println("Task Created: task", id, "has been created")
 	return nil
 }
 
-func defaultActiveLogMessage(id int, properties interface{}) error {
+func defaultActiveLogMessage(w TaskWorkflow, id int, properties interface{}) error {
 	log.Println("Task Active: task", id, "is active")
 	return nil
 }
 
-func defaultWaitingLogMessage(id int, properties interface{}) error {
+func defaultWaitingLogMessage(w TaskWorkflow, id int, properties interface{}) error {
 	log.Println("Task Waiting: task", id, "is waiting")
 	return nil
 }
 
-func defaultCompleteLogMessage(id int, properties interface{}) error {
+func defaultCompleteLogMessage(w TaskWorkflow, id int, properties interface{}) error {
 	log.Println("Task Complete: task", id, "is complete")
 	return nil
 }
 
-func defaultErrorLogMessage(id int, properties interface{}) error {
+func defaultErrorLogMessage(w TaskWorkflow, id int, properties interface{}) error {
 	log.Println("Task Error: task", id, "has an error")
 	return nil
 }
