@@ -71,7 +71,7 @@ func (m *TaskManager) StartTask(id int, w TaskWorkflow) error {
 			}
 			break
 		}
-		err := statusHandlers[i](w, task.Id)
+		err := statusHandlers[i](w)
 		if err != nil {
 			errMessage := fmt.Sprintf("error executing handlers for %v with task %d", i, task.Id)
 			m.handleTaskError(task, w, errMessage)
@@ -139,7 +139,7 @@ func (m *TaskManager) incrementTaskStatus(t Task, w TaskWorkflow) error {
 					}
 					break
 				}
-				err := statusHandlers[j](w, t.Id)
+				err := statusHandlers[j](w)
 				if err != nil {
 					errMessage := fmt.Sprintf("error executing handlers for status '%v' with task ID %d", nextStatus, t.Id)
 					t.Message = err.Error()
@@ -166,6 +166,6 @@ func (m *TaskManager) handleTaskError(t Task, w TaskWorkflow, message string) {
 
 	errorHandlers := w.Handlers["Error"]
 	for i := range errorHandlers {
-		_ = errorHandlers[i](w, t.Id)
+		_ = errorHandlers[i](w)
 	}
 }
