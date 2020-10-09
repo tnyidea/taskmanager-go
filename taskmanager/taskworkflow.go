@@ -6,14 +6,12 @@ import (
 )
 
 type TaskWorkflow struct {
-	ContextProperties interface{} `json:"contextProperties"`
-	Cache             struct {
-		TaskId         int    `json:"taskId"`
-		TaskProperties []byte `json:"taskProperties"`
-	} `json:"cache"`
-	Sequence []string                         `json:"sequence"`
-	Timeouts map[string]int                   `json:"timeouts"`
-	Handlers map[string][]TaskWorkflowHandler `json:"handlers"`
+	ContextProperties interface{}                      `json:"contextProperties"`
+	TaskId            int                              `json:"taskId"`
+	TaskProperties    []byte                           `json:"taskProperties"`
+	Sequence          []string                         `json:"sequence"`
+	Timeouts          map[string]int                   `json:"timeouts"`
+	Handlers          map[string][]TaskWorkflowHandler `json:"handlers"`
 }
 
 type TaskWorkflowHandler func(w TaskWorkflow, id int) error
