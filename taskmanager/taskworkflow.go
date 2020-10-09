@@ -61,7 +61,7 @@ func DefaultTaskWorkflow() TaskWorkflow {
 	}
 }
 
-func CacheTaskProperties(w TaskWorkflow, id int, properties interface{}) {
+func (w *TaskWorkflow) CacheTaskProperties(id int, properties interface{}) {
 	w.Cache.TaskId = id
 	w.Cache.TaskProperties = properties
 }
