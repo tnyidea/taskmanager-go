@@ -56,6 +56,8 @@ func (m *TaskManager) StartTask(id int, w TaskWorkflow) error {
 		return errors.New(errMessage)
 	}
 
+	w.CacheTaskProperties(task.Id, task.Properties)
+
 	statusHandlers := w.Handlers["Created"]
 	for i := range statusHandlers {
 		handlerName := runtime.FuncForPC(reflect.ValueOf(statusHandlers[i]).Pointer()).Name()
