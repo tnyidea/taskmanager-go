@@ -88,6 +88,8 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w TaskWo
 		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", id)
 		return errors.New(errMessage)
 	}
+	w.TaskId = id
+	w.TaskProperties = t.Properties
 
 	switch result {
 	case "success":
