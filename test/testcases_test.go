@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-var testDefaultWorkflow = taskmanager.taskmanager.DefaultTaskWorkflow()
+var testDefaultWorkflow = taskmanager.DefaultTaskWorkflow()
 
 var testTask = taskmanager.Task{
 	Id:          0,

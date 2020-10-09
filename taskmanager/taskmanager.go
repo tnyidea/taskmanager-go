@@ -67,7 +67,7 @@ func (m *TaskManager) StartTask(id int, w TaskWorkflow) error {
 			}
 			break
 		}
-		err := statusHandlers[i](task.Id, w.ContextProperties)
+		err := statusHandlers[i](w, task.Id)
 		if err != nil {
 			errMessage := fmt.Sprintf("error executing handlers for %v with task %d", i, task.Id)
 			m.handleTaskError(task, w, errMessage)
@@ -81,7 +81,7 @@ func (m *TaskManager) StartTask(id int, w TaskWorkflow) error {
 func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w TaskWorkflow) error {
 	t, err := m.FindTask(id)
 	if err != nil {
-		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", t.Id)
+		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", id)
 		return errors.New(errMessage)
 	}
 
@@ -135,7 +135,7 @@ func (m *TaskManager) incrementTaskStatus(t Task, w TaskWorkflow) error {
 					}
 					break
 				}
-				err := statusHandlers[j](t.Id, w.ContextProperties)
+				err := statusHandlers[j](w, t.Id)
 				if err != nil {
 					errMessage := fmt.Sprintf("error executing handlers for status '%v' with task ID %d", nextStatus, t.Id)
 					t.Message = err.Error()
@@ -162,6 +162,6 @@ func (m *TaskManager) handleTaskError(t Task, w TaskWorkflow, message string) {
 
 	errorHandlers := w.Handlers["Error"]
 	for i := range errorHandlers {
-		_ = errorHandlers[i](t.Id, w.ContextProperties)
+		_ = errorHandlers[i](w, t.Id)
 	}
 }
