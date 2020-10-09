@@ -12,8 +12,8 @@ import (
 )
 
 type TaskManager struct {
-	DataUrl string  `json:"dataUrl"`
-	db      *sql.DB `json:"-"`
+	DataUrl string `json:"dataUrl"`
+	db      *sql.DB
 }
 
 func (m *TaskManager) String() string {

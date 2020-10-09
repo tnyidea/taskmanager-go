@@ -6,10 +6,14 @@ import (
 )
 
 type TaskWorkflow struct {
-	ContextProperties interface{}                                             `json:"contextProperties"`
-	Sequence          []string                                                `json:"sequence"`
-	Timeouts          map[string]int                                          `json:"timeouts"`
-	Handlers          map[string][]func(id int, properties interface{}) error `json:"handlers"`
+	ContextProperties interface{} `json:"contextProperties"`
+	Cache             struct {
+		TaskId         int         `json:"taskId"`
+		TaskProperties interface{} `json:"taskProperties"`
+	} `json:"cache"`
+	Sequence []string                                                `json:"sequence"`
+	Timeouts map[string]int                                          `json:"timeouts"`
+	Handlers map[string][]func(id int, properties interface{}) error `json:"handlers"`
 }
 
 func (w *TaskWorkflow) Bytes() []byte {
@@ -53,6 +57,11 @@ func DefaultTaskWorkflow() TaskWorkflow {
 			},
 		},
 	}
+}
+
+func (w *TaskWorkflow) CacheTaskProperties(id int, properties interface{}) {
+	w.Cache.TaskId = id
+	w.Cache.TaskProperties = properties
 }
 
 func NextStatus(id int, properties interface{}) error {
