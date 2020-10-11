@@ -12,30 +12,44 @@ import (
 )
 
 type TaskManager struct {
-	DataUrl string `json:"dataUrl"`
+	DataUrl string
 	db      *sql.DB
+
+	TaskTypeWorkflows map[string]TaskWorkflowDefinition
+}
+
+func (m *TaskManager) Bytes() []byte {
+	b, _ := json.Marshal(m)
+	return b
 }
 
 func (m *TaskManager) String() string {
-	byteValue, _ := json.MarshalIndent(m, "", "    ")
-	return string(byteValue)
+	b, _ := json.MarshalIndent(m, "", "    ")
+	return string(b)
 }
 
-func New(dataUrl string) (TaskManager, error) {
+type TaskWorkflowDefinition func(properties interface{})
+
+func New(dataUrl string, taskTypeWorkflows map[string]TaskWorkflowDefinition) TaskManager {
+	return TaskManager{
+		DataUrl:           dataUrl,
+		TaskTypeWorkflows: taskTypeWorkflows,
+	}
+}
+
+func (m *TaskManager) Open() error {
 	// Open Connection
-	db, err := sql.Open("postgres", dataUrl)
+	db, err := sql.Open("postgres", m.DataUrl)
 	if err != nil {
-		log.Println(err)
-		return TaskManager{}, err
+		return err
 	}
 
-	return TaskManager{
-		DataUrl: dataUrl,
-		db:      db,
-	}, nil
+	m.db = db
+	return nil
 }
 
 func (m *TaskManager) Close() {
+	// Close Connection but ignore any errors
 	_ = m.db.Close()
 }
 
