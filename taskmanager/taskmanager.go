@@ -168,6 +168,7 @@ func (m *TaskManager) incrementTaskStatus(t Task, w TaskWorkflow) error {
 	return nil
 }
 
+// TODO make this more strict
 func (m *TaskManager) handleTaskError(t Task, w TaskWorkflow, message string) {
 	log.Println("Handling Task ", t.Id, "Error:", message)
 	t.Status = "Error"
