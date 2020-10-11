@@ -86,7 +86,7 @@ const deleteTaskBlueSQL = `
     DELETE FROM task_manager_blue
     WHERE id = $1`
 
-func (m *TaskManager) createTaskBlue(t Task) (int, error) {
+func (m *TaskManager) createTaskBlue(t Task) (Task, error) {
 	if t.Timeout < 1 {
 		t.Timeout = -1
 	}
@@ -96,10 +96,11 @@ func (m *TaskManager) createTaskBlue(t Task) (int, error) {
 	row := m.db.QueryRow(createTaskBlueSQL, rowSourceTask(t)...)
 	err := row.Scan(&id)
 	if err != nil {
-		return 0, err
+		return Task{}, err
 	}
 
-	return id, nil
+	t.Id = id
+	return t, nil
 }
 
 func (m *TaskManager) countAllTasksBlue() (int, error) {

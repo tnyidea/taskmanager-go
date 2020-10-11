@@ -4,7 +4,7 @@ import (
 	"strconv"
 )
 
-func (m *TaskManager) CreateTask(t Task) (int, error) {
+func (m *TaskManager) CreateTask(t Task) (Task, error) {
 	return m.createTaskBlue(t)
 }
 
