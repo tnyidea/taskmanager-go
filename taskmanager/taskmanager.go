@@ -71,8 +71,7 @@ func (m *TaskManager) StartTask(id int, w TaskWorkflow) error {
 	}
 
 	// Cache the Task Information in the workflow
-	w.TaskId = task.Id
-	w.TaskProperties = task.Properties
+	w.Task = task
 
 	statusHandlers := w.Handlers["Created"]
 	for i := range statusHandlers {
@@ -102,8 +101,7 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w TaskWo
 		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", id)
 		return errors.New(errMessage)
 	}
-	w.TaskId = id
-	w.TaskProperties = t.Properties
+	w.Task = t
 
 	switch result {
 	case "success":

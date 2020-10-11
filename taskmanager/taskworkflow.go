@@ -7,8 +7,7 @@ import (
 
 type TaskWorkflow struct {
 	ContextProperties interface{}                      `json:"contextProperties"`
-	TaskId            int                              `json:"taskId"`
-	TaskProperties    []byte                           `json:"taskProperties"`
+	Task              Task                             `json:"task"`
 	Sequence          []string                         `json:"sequence"`
 	Timeouts          map[string]int                   `json:"timeouts"`
 	Handlers          map[string][]TaskWorkflowHandler `json:"handlers"`
@@ -26,9 +25,9 @@ func (w *TaskWorkflow) String() string {
 	return string(b)
 }
 
-func DefaultTaskWorkflow() TaskWorkflow {
+func DefaultTaskWorkflow(properties interface{}) TaskWorkflow {
 	return TaskWorkflow{
-		ContextProperties: make(map[string]string),
+		ContextProperties: properties,
 		Sequence: []string{
 			"Created", "Active", "Waiting", "Complete",
 		},
@@ -77,26 +76,26 @@ func WaitForNotify(w TaskWorkflow) error {
 }
 
 func defaultCreateLogMessage(w TaskWorkflow) error {
-	log.Println("Task Created: task", w.TaskId, "has been created")
+	log.Println("Task Created: task", w.Task.Id, "has been created")
 	return nil
 }
 
 func defaultActiveLogMessage(w TaskWorkflow) error {
-	log.Println("Task Active: task", w.TaskId, "is active")
+	log.Println("Task Active: task", w.Task.Id, "is active")
 	return nil
 }
 
 func defaultWaitingLogMessage(w TaskWorkflow) error {
-	log.Println("Task Waiting: task", w.TaskId, "is waiting")
+	log.Println("Task Waiting: task", w.Task.Id, "is waiting")
 	return nil
 }
 
 func defaultCompleteLogMessage(w TaskWorkflow) error {
-	log.Println("Task Complete: task", w.TaskId, "is complete")
+	log.Println("Task Complete: task", w.Task.Id, "is complete")
 	return nil
 }
 
 func defaultErrorLogMessage(w TaskWorkflow) error {
-	log.Println("Task Error: task", w.TaskId, "has an error")
+	log.Println("Task Error: task", w.Task.Id, "has an error")
 	return nil
 }

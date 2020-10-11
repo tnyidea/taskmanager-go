@@ -7,7 +7,10 @@ import (
 	"testing"
 )
 
-var testDefaultWorkflow = taskmanager.DefaultTaskWorkflow()
+var testTaskManager = taskmanager.New(TaskManagerTestDataUrl,
+	map[string]taskmanager.TaskWorkflowDefinition{
+		"TaskType": taskmanager.DefaultTaskWorkflow,
+	})
 
 var testTask = taskmanager.Task{
 	Id:          0,
@@ -34,7 +37,8 @@ func TestCreateTableTaskManager(t *testing.T) {
 }
 
 func TestCreateAndFindTask(t *testing.T) {
-	m, err := taskmanager.New(TaskManagerTestDataUrl)
+	m := testTaskManager
+	err := m.Open()
 	if err != nil {
 		log.Println(err)
 		t.FailNow()
@@ -43,13 +47,14 @@ func TestCreateAndFindTask(t *testing.T) {
 
 	createFindTask := testTask
 
-	id, err := m.CreateTask(createFindTask)
+	task, err := m.CreateTask(createFindTask)
 	if err != nil {
 		log.Println("CreateTask", err)
 		t.FailNow()
 	}
+	id := task.Id
 
-	task, err := m.FindTask(id)
+	task, err = m.FindTask(id)
 	if err != nil {
 		log.Println("FindTask", err)
 		t.FailNow()
@@ -69,7 +74,8 @@ func TestCreateAndFindTask(t *testing.T) {
 }
 
 func TestFindAllTasks(t *testing.T) {
-	m, err := taskmanager.New(TaskManagerTestDataUrl)
+	m := testTaskManager
+	err := m.Open()
 	if err != nil {
 		log.Println(err)
 		m.Close()
@@ -94,7 +100,8 @@ func TestFindAllTasks(t *testing.T) {
 }
 
 func TestUpdateTask(t *testing.T) {
-	m, err := taskmanager.New(TaskManagerTestDataUrl)
+	m := testTaskManager
+	err := m.Open()
 	if err != nil {
 		log.Println(err)
 		m.Close()
@@ -131,7 +138,8 @@ func TestUpdateTask(t *testing.T) {
 }
 
 func TestDeleteTask(t *testing.T) {
-	m, err := taskmanager.New(TaskManagerTestDataUrl)
+	m := testTaskManager
+	err := m.Open()
 	if err != nil {
 		log.Println(err)
 		m.Close()
@@ -158,7 +166,8 @@ func TestDeleteTask(t *testing.T) {
 }
 
 func TestCreateAndFindNullTask(t *testing.T) {
-	m, err := taskmanager.New(TaskManagerTestDataUrl)
+	m := testTaskManager
+	err := m.Open()
 	if err != nil {
 		log.Println(err)
 		m.Close()
@@ -170,14 +179,15 @@ func TestCreateAndFindNullTask(t *testing.T) {
 		Properties: []byte("{}"),
 	}
 
-	id, err := m.CreateTask(nullTask)
+	task, err := m.CreateTask(nullTask)
 	if err != nil {
 		log.Println("CreateTask:", err)
 		m.Close()
 		t.FailNow()
 	}
+	id := task.Id
 
-	task, err := m.FindTask(id)
+	task, err = m.FindTask(id)
 	if err != nil {
 		log.Println("FindTask:", err)
 		m.Close()
@@ -205,26 +215,28 @@ func TestCreateAndFindNullTask(t *testing.T) {
 }
 
 func TestCreateAndStartTask(t *testing.T) {
-	m, err := taskmanager.New(TaskManagerTestDataUrl)
+	m := testTaskManager
+	err := m.Open()
 	if err != nil {
 		log.Println("taskmanager.New:", err)
 		t.FailNow()
 	}
 	defer m.Close()
 
-	id, err := m.CreateTask(testTask)
+	task, err := m.CreateTask(testTask)
 	if err != nil {
 		log.Println("taskmanager.CreateTask:", err)
 		t.FailNow()
 	}
+	id := task.Id
 
-	err = m.StartTask(id, testDefaultWorkflow)
+	err = m.StartTask(id, m.TaskTypeWorkflows[task.TaskType](nil))
 	if err != nil {
 		log.Println("taskmanager.StartTask:", err)
 		t.FailNow()
 	}
 
-	task, err := m.FindTask(id)
+	task, err = m.FindTask(id)
 	if err != nil {
 		log.Println("taskmanager.FindTask:", err)
 		t.FailNow()
@@ -245,7 +257,8 @@ func TestCreateAndStartTask(t *testing.T) {
 }
 
 func TestUpdateTaskStatus(t *testing.T) {
-	m, err := taskmanager.New(TaskManagerTestDataUrl)
+	m := testTaskManager
+	err := m.Open()
 	if err != nil {
 		log.Println("taskmanager.New:", err)
 		t.FailNow()
@@ -259,7 +272,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 	}
 	log.Println(&task)
 
-	err = m.NotifyTaskWaitStatusResult(task.Id, "success", testDefaultWorkflow)
+	err = m.NotifyTaskWaitStatusResult(task.Id, "success", m.TaskTypeWorkflows[task.TaskType](nil))
 	if err != nil {
 		log.Println("taskmanager.UpdateTaskStatus:", err)
 		t.FailNow()
