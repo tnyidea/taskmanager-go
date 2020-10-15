@@ -21,6 +21,8 @@ var testTask = taskmanager.Task{
 	Properties:  []byte(`{ "sampleData": "sampleData" }`),
 }
 
+var testContextProperties = make(map[string]string)
+
 func TestDropTableTaskManager(t *testing.T) {
 	err := dropTableTaskManager()
 	if err != nil {
@@ -230,7 +232,7 @@ func TestCreateAndStartTask(t *testing.T) {
 	}
 	id := task.Id
 
-	err = m.StartTask(id, m.TaskTypeWorkflows[task.TaskType](nil))
+	err = m.StartTask(id, m.TaskTypeWorkflows[task.TaskType](m, testContextProperties))
 	if err != nil {
 		log.Println("taskmanager.StartTask:", err)
 		t.FailNow()
@@ -272,7 +274,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 	}
 	log.Println(&task)
 
-	err = m.NotifyTaskWaitStatusResult(task.Id, "success", m.TaskTypeWorkflows[task.TaskType](nil))
+	err = m.NotifyTaskWaitStatusResult(task.Id, "success", m.TaskTypeWorkflows[task.TaskType](m, testContextProperties))
 	if err != nil {
 		log.Println("taskmanager.UpdateTaskStatus:", err)
 		t.FailNow()

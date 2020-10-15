@@ -26,9 +26,10 @@ func (w *TaskWorkflow) String() string {
 	return string(b)
 }
 
-func DefaultTaskWorkflow(properties interface{}) TaskWorkflow {
+func DefaultTaskWorkflow(t TaskManager, properties interface{}) TaskWorkflow {
 	return TaskWorkflow{
 		ContextProperties: properties,
+		TaskManager:       t,
 		Sequence: []string{
 			"Created", "Active", "Waiting", "Complete",
 		},
