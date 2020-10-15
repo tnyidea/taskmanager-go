@@ -12,8 +12,8 @@ func newDBConnection(url string) (*sql.DB, error) {
 	return sql.Open("postgres", url)
 }
 
-func createTableTaskManagerBlue() error {
-	createTableTaskManagerBlueSQL, err := ioutil.ReadFile("create_task_manager_blue.sql")
+func createTableTaskManager() error {
+	createTableSQL, err := ioutil.ReadFile("create_task_manager.sql")
 	if err != nil {
 		return err
 	}
@@ -23,7 +23,7 @@ func createTableTaskManagerBlue() error {
 		return err
 	}
 
-	_, err = d.Exec(string(createTableTaskManagerBlueSQL))
+	_, err = d.Exec(string(createTableSQL))
 	if err != nil {
 		return err
 	}
@@ -32,18 +32,18 @@ func createTableTaskManagerBlue() error {
 	return nil
 }
 
-func dropTableTaskManagerBlue() error {
-	dropTableTaskManagerBlueSQL := `
-        DROP TRIGGER set_task_manager_blue_updated_at_timestamp ON task_manager_blue;
+func dropTableTaskManager() error {
+	dropTableSQL := `
+        DROP TRIGGER set_task_manager_updated_at_timestamp ON task_manager;
         DROP FUNCTION get_updated_at_timestamp();
-        DROP TABLE task_manager_blue;`
+        DROP TABLE task_manager;`
 
 	d, err := newDBConnection(TaskManagerTestDataUrl)
 	if err != nil {
 		return err
 	}
 
-	_, err = d.Exec(dropTableTaskManagerBlueSQL)
+	_, err = d.Exec(dropTableSQL)
 	if err != nil {
 		return err
 	}

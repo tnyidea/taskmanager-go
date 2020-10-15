@@ -12,6 +12,7 @@ type Task struct {
 	ReferenceId string `json:"referenceId"`
 
 	// Task Metadata
+	TaskGroup  string `json:"taskGroup"`
 	TaskType   string `json:"taskType"`
 	Status     string `json:"status"`
 	Message    string `json:"message"`

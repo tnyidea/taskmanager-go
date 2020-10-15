@@ -22,14 +22,14 @@ var testTask = taskmanager.Task{
 }
 
 func TestDropTableTaskManager(t *testing.T) {
-	err := dropTableTaskManagerBlue()
+	err := dropTableTaskManager()
 	if err != nil {
 		log.Print("ignoring DropTableTaskManagerBlue error:", err)
 	}
 }
 
 func TestCreateTableTaskManager(t *testing.T) {
-	err := createTableTaskManagerBlue()
+	err := createTableTaskManager()
 	if err != nil {
 		log.Println(err)
 		t.FailNow()

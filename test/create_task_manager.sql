@@ -1,4 +1,4 @@
-create table task_manager_blue
+create table task_manager
 (
     -- Primary Key
     id           serial not null,
@@ -7,6 +7,7 @@ create table task_manager_blue
     reference_id varchar(20),
 
     -- Task Metadata
+    task_group   varchar(20),
     task_type    varchar(20),
     status       varchar(20),
     message      varchar(512),
@@ -14,8 +15,8 @@ create table task_manager_blue
     properties   bytea,
 
     -- Record Timestamps
-    created_at   timestamp with time zone default now(),
-    updated_at   timestamp with time zone default now()
+    created_at   timestamptz default now(),
+    updated_at   timestamptz default now()
 );
 
 create or replace function get_updated_at_timestamp() returns trigger
@@ -28,8 +29,8 @@ BEGIN
 END;
 $$;
 
-create trigger set_task_manager_blue_updated_at_timestamp
+create trigger set_task_manager_updated_at_timestamp
     before update
-    on task_manager_blue
+    on task_manager
     for each row
 execute procedure get_updated_at_timestamp();

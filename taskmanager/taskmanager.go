@@ -117,6 +117,22 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w TaskWo
 	}
 }
 
+func (m *TaskManager) UpdateTaskWithWorkflowProperties(id int, w TaskWorkflow) error {
+	task, err := m.FindTask(id)
+	if err != nil {
+		return err
+	}
+
+	task.Properties = w.Task.Properties
+
+	err = m.UpdateTask(task)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *TaskManager) incrementTaskStatus(t Task, w TaskWorkflow) error {
 	_, err := m.FindTask(t.Id)
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 
 type TaskWorkflow struct {
 	ContextProperties interface{}                      `json:"contextProperties"`
+	TaskManager       TaskManager                      `json:"taskManager"`
 	Task              Task                             `json:"task"`
 	Sequence          []string                         `json:"sequence"`
 	Timeouts          map[string]int                   `json:"timeouts"`
@@ -68,8 +69,6 @@ func EndWorkflow(w TaskWorkflow) error {
 	return nil
 }
 
-// TODO Add a Wait status to the task manager that must be part of the workflow
-// TODO This Wait status must be part of the workflow -- if not it will be an error
 func WaitForNotify(w TaskWorkflow) error {
 	// NoOp Function to tell the workflow to do nothing and wait to resume or end
 	return nil
