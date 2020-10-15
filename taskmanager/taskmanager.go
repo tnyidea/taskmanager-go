@@ -53,7 +53,7 @@ func (m *TaskManager) Close() {
 	_ = m.db.Close()
 }
 
-func (m *TaskManager) StartTask(id int, w TaskWorkflow) error {
+func (m *TaskManager) StartTask(id int, w *TaskWorkflow) error {
 	if w.ContextProperties == nil {
 		errMessage := "workflow context properties is undefined"
 		return errors.New(errMessage)
@@ -95,7 +95,7 @@ func (m *TaskManager) StartTask(id int, w TaskWorkflow) error {
 	return nil
 }
 
-func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w TaskWorkflow) error {
+func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w *TaskWorkflow) error {
 	t, err := m.FindTask(id)
 	if err != nil {
 		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", id)
@@ -133,7 +133,7 @@ func (m *TaskManager) UpdateTaskWithProperties(id int, properties []byte) error 
 	return nil
 }
 
-func (m *TaskManager) incrementTaskStatus(t Task, w TaskWorkflow) error {
+func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 	_, err := m.FindTask(t.Id)
 	if err != nil {
 		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", t.Id)
@@ -185,7 +185,7 @@ func (m *TaskManager) incrementTaskStatus(t Task, w TaskWorkflow) error {
 }
 
 // TODO make this more strict
-func (m *TaskManager) handleTaskError(t Task, w TaskWorkflow, message string) {
+func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
 	log.Println("Handling Task ", t.Id, "Error:", message)
 	t.Status = "Error"
 	t.Message = message

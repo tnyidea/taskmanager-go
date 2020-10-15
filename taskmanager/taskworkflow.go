@@ -14,7 +14,7 @@ type TaskWorkflow struct {
 	Handlers          map[string][]TaskWorkflowHandler `json:"handlers"`
 }
 
-type TaskWorkflowHandler func(w TaskWorkflow) error
+type TaskWorkflowHandler func(w *TaskWorkflow) error
 
 func (w *TaskWorkflow) Bytes() []byte {
 	b, _ := json.Marshal(w)
@@ -60,22 +60,22 @@ func DefaultTaskWorkflow(t TaskManager, properties interface{}) TaskWorkflow {
 	}
 }
 
-func NextStatus(w TaskWorkflow) error {
+func NextStatus(w *TaskWorkflow) error {
 	// NoOp Function to tell the workflow to increment task state in sequence
 	return nil
 }
 
-func EndWorkflow(w TaskWorkflow) error {
+func EndWorkflow(w *TaskWorkflow) error {
 	// NoOp Function to tell the workflow to end processing
 	return nil
 }
 
-func WaitForNotify(w TaskWorkflow) error {
+func WaitForNotify(w *TaskWorkflow) error {
 	// NoOp Function to tell the workflow to do nothing and wait to resume or end
 	return nil
 }
 
-func UpdateTaskWithWorkflowProperties(w TaskWorkflow) error {
+func UpdateTaskWithWorkflowProperties(w *TaskWorkflow) error {
 	t := w.TaskManager
 	err := t.Open()
 	if err != nil {
@@ -90,27 +90,27 @@ func UpdateTaskWithWorkflowProperties(w TaskWorkflow) error {
 	return nil
 }
 
-func defaultCreateLogMessage(w TaskWorkflow) error {
+func defaultCreateLogMessage(w *TaskWorkflow) error {
 	log.Println("Task Created: task", w.Task.Id, "has been created")
 	return nil
 }
 
-func defaultActiveLogMessage(w TaskWorkflow) error {
+func defaultActiveLogMessage(w *TaskWorkflow) error {
 	log.Println("Task Active: task", w.Task.Id, "is active")
 	return nil
 }
 
-func defaultWaitingLogMessage(w TaskWorkflow) error {
+func defaultWaitingLogMessage(w *TaskWorkflow) error {
 	log.Println("Task Waiting: task", w.Task.Id, "is waiting")
 	return nil
 }
 
-func defaultCompleteLogMessage(w TaskWorkflow) error {
+func defaultCompleteLogMessage(w *TaskWorkflow) error {
 	log.Println("Task Complete: task", w.Task.Id, "is complete")
 	return nil
 }
 
-func defaultErrorLogMessage(w TaskWorkflow) error {
+func defaultErrorLogMessage(w *TaskWorkflow) error {
 	log.Println("Task Error: task", w.Task.Id, "has an error")
 	return nil
 }

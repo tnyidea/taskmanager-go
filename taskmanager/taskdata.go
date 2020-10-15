@@ -16,6 +16,7 @@ type pqTaskManager struct {
 	TaskGroup  sql.NullString `sql:"task_group"`
 	TaskType   sql.NullString `sql:"task_type"`
 	Status     sql.NullString `sql:"status"`
+	Message    sql.NullString `sql:"message"`
 	Timeout    sql.NullInt32  `sql:"timeout"`
 	Properties []byte         `sql:"properties"`
 }
@@ -27,6 +28,7 @@ func (t *pqTaskManager) task() Task {
 		TaskGroup:   t.TaskGroup.String,
 		TaskType:    t.TaskType.String,
 		Status:      t.Status.String,
+		Message:     t.Message.String,
 		Timeout:     int(t.Timeout.Int32),
 		Properties:  t.Properties,
 	}
@@ -37,7 +39,8 @@ func (t *pqTaskManager) task() Task {
 func rowSourceTask(t Task) []interface{} {
 	return []interface{}{
 		t.ReferenceId,
-		t.TaskGroup, t.TaskType, t.Status, t.Timeout,
+		t.TaskGroup, t.TaskType,
+		t.Status, t.Message, t.Timeout,
 		t.Properties,
 	}
 }
@@ -45,7 +48,8 @@ func rowSourceTask(t Task) []interface{} {
 func (t *pqTaskManager) rowDestination() []interface{} {
 	return []interface{}{
 		&t.Id, &t.ReferenceId,
-		&t.TaskGroup, &t.TaskType, &t.Status, &t.Timeout,
+		&t.TaskGroup, &t.TaskType,
+		&t.Status, &t.Message, &t.Timeout,
 		&t.Properties,
 	}
 }
@@ -57,13 +61,13 @@ const columnsTaskManager = `
 
 const createTaskSQL = `
     INSERT INTO task_manager (` + columnsTaskManager + `)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING id`
 
 const updateTaskSQL = `
     UPDATE task_manager
     SET (` + columnsTaskManager + `) =
-    ($2, $3, $4, $5, $6, $7)
+    ($2, $3, $4, $5, $6, $7, $8)
     WHERE id = $1`
 
 const countTasksSQL = `
