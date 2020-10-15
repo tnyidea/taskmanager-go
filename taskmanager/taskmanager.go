@@ -117,13 +117,13 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w TaskWo
 	}
 }
 
-func (m *TaskManager) UpdateTaskWithWorkflowProperties(id int, w TaskWorkflow) error {
+func (m *TaskManager) UpdateTaskWithProperties(id int, properties []byte) error {
 	task, err := m.FindTask(id)
 	if err != nil {
 		return err
 	}
 
-	task.Properties = w.Task.Properties
+	task.Properties = properties
 
 	err = m.UpdateTask(task)
 	if err != nil {

@@ -15,6 +15,7 @@ var testTaskManager = taskmanager.New(TaskManagerTestDataUrl,
 var testTask = taskmanager.Task{
 	Id:          0,
 	ReferenceId: "ReferenceId",
+	TaskGroup:   "TaskGroup",
 	TaskType:    "TaskType",
 	Status:      "Failed",
 	Timeout:     300,
