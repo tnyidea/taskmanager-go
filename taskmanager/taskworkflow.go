@@ -81,7 +81,11 @@ func UpdateTaskWithWorkflowProperties(w *TaskWorkflow) error {
 	if err != nil {
 		return err
 	}
+	defer t.Close()
 
+	log.Println("UpdateTaskWithWorkflowProperties w.Task:", w.Task)
+
+	log.Println("Updating Task with Properties")
 	err = t.UpdateTaskWithProperties(w.Task.Id, w.Task.Properties)
 	if err != nil {
 		return err
