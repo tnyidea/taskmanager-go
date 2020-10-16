@@ -75,25 +75,6 @@ func WaitForNotify(w *TaskWorkflow) error {
 	return nil
 }
 
-func UpdateTaskWithWorkflowProperties(w *TaskWorkflow) error {
-	t := w.TaskManager
-	err := t.Open()
-	if err != nil {
-		return err
-	}
-	defer t.Close()
-
-	log.Println("UpdateTaskWithWorkflowProperties w.Task:", w.Task)
-
-	log.Println("Updating Task with Properties")
-	err = t.UpdateTaskWithProperties(w.Task.Id, w.Task.Properties)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func defaultCreateLogMessage(w *TaskWorkflow) error {
 	log.Println("Task Created: task", w.Task.Id, "has been created")
 	return nil

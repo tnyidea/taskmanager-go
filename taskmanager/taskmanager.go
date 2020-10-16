@@ -118,22 +118,6 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w *TaskW
 	}
 }
 
-func (m *TaskManager) UpdateTaskWithProperties(id int, properties []byte) error {
-	task, err := m.FindTask(id)
-	if err != nil {
-		return err
-	}
-
-	task.Properties = properties
-
-	err = m.UpdateTask(task)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 	_, err := m.FindTask(t.Id)
 	if err != nil {
@@ -150,12 +134,18 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 			t.Status = nextStatus
 			t.Timeout = w.Timeouts[nextStatus]
 
+			// Update the task manager with the cached task properties
+			t.Properties = w.Task.Properties
+
 			err = m.UpdateTask(t)
 			if err != nil {
 				errMessage := fmt.Sprintf("error updating task ID %d with status '%v' to new status '%v'", t.Id, status, nextStatus)
 				m.handleTaskError(t, w, errMessage)
 				return errors.New(errMessage)
 			}
+
+			// Cache the current version of the task
+			w.Task = t
 
 			statusHandlers := w.Handlers[nextStatus]
 			for j := range statusHandlers {
