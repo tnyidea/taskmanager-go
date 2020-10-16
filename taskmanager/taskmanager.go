@@ -28,7 +28,7 @@ func (m *TaskManager) String() string {
 	return string(b)
 }
 
-type TaskWorkflowDefinition func(t TaskManager, properties interface{}) TaskWorkflow
+type TaskWorkflowDefinition func(t TaskManager, properties interface{}) *TaskWorkflow
 
 func New(dataUrl string, taskTypeWorkflows map[string]TaskWorkflowDefinition) TaskManager {
 	return TaskManager{

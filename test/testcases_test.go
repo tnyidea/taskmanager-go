@@ -233,8 +233,7 @@ func TestCreateAndStartTask(t *testing.T) {
 	}
 	id := task.Id
 
-	taskWorkflow := m.TaskTypeWorkflows[task.TaskType](m, testContextProperties)
-	err = m.StartTask(id, &taskWorkflow)
+	err = m.StartTask(id, m.TaskTypeWorkflows[task.TaskType](m, testContextProperties))
 	if err != nil {
 		log.Println("taskmanager.StartTask:", err)
 		t.FailNow()
@@ -276,8 +275,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 	}
 	log.Println(&task)
 
-	taskWorkflow := m.TaskTypeWorkflows[task.TaskType](m, testContextProperties)
-	err = m.NotifyTaskWaitStatusResult(task.Id, "success", &taskWorkflow)
+	err = m.NotifyTaskWaitStatusResult(task.Id, "success", m.TaskTypeWorkflows[task.TaskType](m, testContextProperties))
 	if err != nil {
 		log.Println("taskmanager.UpdateTaskStatus:", err)
 		t.FailNow()
