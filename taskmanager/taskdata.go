@@ -56,7 +56,8 @@ func (t *pqTaskManager) rowDestination() []interface{} {
 
 const columnsTaskManager = `
     reference_id,
-    task_group, task_type, status, timeout,
+    task_group, task_type,
+    status, message, timeout,
     properties`
 
 const createTaskSQL = `

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	_ "github.com/lib/pq"
 	"log"
 	"reflect"
 	"runtime"
