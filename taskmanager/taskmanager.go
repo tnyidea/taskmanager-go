@@ -15,8 +15,9 @@ import (
 )
 
 type TaskManager struct {
-	Context context.Context
-	db      *sql.DB
+	Context       context.Context
+	DatabaseTable string
+	db            *sql.DB
 
 	//	DataUrl string
 	//	TaskTypeWorkflows map[string]TaskWorkflowDefinition

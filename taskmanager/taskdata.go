@@ -63,41 +63,62 @@ const sqlTaskColumns = `
     recurring, status, timeout, message,
     properties`
 
-const sqlCreateTask = `
-    INSERT INTO ` + sqlTaskTable +
-	` (` + sqlTaskColumns + `)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-    RETURNING id`
+func sqlQueryTaskTable(t string) string {
+	if t == "" {
+		return sqlTaskTable
+	}
+	return t
+}
 
-const sqlUpdateTask = `
-    UPDATE ` + sqlTaskTable + `
-    SET (` + sqlTaskColumns + `) =
-    ($2, $3, $4, $5, $6, $7, $8, $9)
-    WHERE id = $1`
+func sqlCreateTask(t string) string {
+	return `
+        INSERT INTO ` + sqlQueryTaskTable(t) +
+		` (` + sqlTaskColumns + `)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id`
+}
 
-const sqlCountAllTasks = `
-    SELECT count(id)
-    FROM ` + sqlTaskTable
+func sqlUpdateTask(t string) string {
+	return `
+        UPDATE ` + sqlQueryTaskTable(t) + `
+        SET (` + sqlTaskColumns + `) =
+        ($2, $3, $4, $5, $6, $7, $8, $9)
+        WHERE id = $1`
+}
 
-const sqlFindAllTasks = `
-    SELECT id, ` + sqlTaskColumns + `
-    FROM ` + sqlTaskTable
+func sqlCountAllTasks(t string) string {
+	return `
+        SELECT count(id)
+        FROM ` + sqlQueryTaskTable(t)
+}
 
-const sqlFindTask = sqlFindAllTasks +
-	" WHERE id = $1"
+func sqlFindAllTasks(t string) string {
+	return `
+        SELECT id, ` + sqlTaskColumns + `
+        FROM ` + sqlQueryTaskTable(t)
+}
 
-const sqlFindAllTasksByGroupAndStatus = sqlFindAllTasks +
-	" WHERE task_group = $1 AND status = $2"
+func sqlFindTask(t string) string {
+	return sqlFindAllTasks(t) + " WHERE id = $1"
+}
 
-const sqlFindAllTasksByTypeAndStatus = sqlFindAllTasks +
-	" WHERE task_type = $1 AND status = $2"
+func sqlFindAllTasksByGroupAndStatus(t string) string {
+	return sqlFindAllTasks(t) + " WHERE task_group = $1 AND status = $2"
+}
 
-const sqlFindAllRecurringTasks = sqlFindAllTasks +
-	" WHERE recurring IS true"
+func sqlFindAllTasksByTypeAndStatus(t string) string {
+	return sqlFindAllTasks(t) + " WHERE task_type = $1 AND status = $2"
+}
 
-const deleteTaskSQL = `
-    DELETE FROM ` + sqlTaskTable + `
-    WHERE id = $1`
+func sqlFindAllRecurringTasks(t string) string {
+	return sqlFindAllTasks(t) + " WHERE recurring IS true"
+}
+
+func sqlDeleteTask(t string) string {
+	return `
+        DELETE FROM ` + sqlQueryTaskTable(t) + `
+        WHERE id = $1`
+}
 
 func (m *TaskManager) CreateTask(t Task) (Task, error) {
 	if t.Timeout < 1 {
@@ -106,7 +127,7 @@ func (m *TaskManager) CreateTask(t Task) (Task, error) {
 	t.Status = "Created"
 
 	var id int
-	row := m.db.QueryRow(sqlCreateTask, rowSqlSourceTask(t)...)
+	row := m.db.QueryRow(sqlCreateTask(m.DatabaseTable), rowSqlSourceTask(t)...)
 	err := row.Scan(&id)
 	if err != nil {
 		return Task{}, err
@@ -117,7 +138,7 @@ func (m *TaskManager) CreateTask(t Task) (Task, error) {
 }
 
 func (m *TaskManager) CountAllTasks() (int, error) {
-	row := m.db.QueryRow(sqlCountAllTasks)
+	row := m.db.QueryRow(sqlCountAllTasks(m.DatabaseTable))
 
 	var count int
 	err := row.Scan(&count)
@@ -128,7 +149,7 @@ func (m *TaskManager) CountAllTasks() (int, error) {
 }
 
 func (m *TaskManager) FindAllTasks(options map[string]string) ([]Task, error) {
-	rows, err := m.db.Query(sqlFindAllTasks + findAllOptionsString(options))
+	rows, err := m.db.Query(sqlFindAllTasks(m.DatabaseTable) + findAllOptionsString(options))
 
 	var result []Task
 	if err != nil {
@@ -149,7 +170,7 @@ func (m *TaskManager) FindAllTasks(options map[string]string) ([]Task, error) {
 }
 
 func (m *TaskManager) FindTask(id int) (Task, error) {
-	row := m.db.QueryRow(sqlFindTask, id)
+	row := m.db.QueryRow(sqlFindTask(m.DatabaseTable), id)
 
 	var t sqlTask
 	err := row.Scan(t.rowSqlDestination()...)
@@ -160,7 +181,7 @@ func (m *TaskManager) FindTask(id int) (Task, error) {
 }
 
 func (m *TaskManager) FindAllTasksByGroupAndStatus(taskGroup string, status string, options map[string]string) ([]Task, error) {
-	rows, err := m.db.Query(sqlFindAllTasksByGroupAndStatus+findAllOptionsString(options), taskGroup, status)
+	rows, err := m.db.Query(sqlFindAllTasksByGroupAndStatus(m.DatabaseTable)+findAllOptionsString(options), taskGroup, status)
 
 	var result []Task
 	if err != nil {
@@ -181,7 +202,7 @@ func (m *TaskManager) FindAllTasksByGroupAndStatus(taskGroup string, status stri
 }
 
 func (m *TaskManager) FindAllTasksByTypeAndStatus(taskType string, status string, options map[string]string) ([]Task, error) {
-	rows, err := m.db.Query(sqlFindAllTasksByTypeAndStatus+findAllOptionsString(options), taskType, status)
+	rows, err := m.db.Query(sqlFindAllTasksByTypeAndStatus(m.DatabaseTable)+findAllOptionsString(options), taskType, status)
 
 	var result []Task
 	if err != nil {
@@ -202,7 +223,7 @@ func (m *TaskManager) FindAllTasksByTypeAndStatus(taskType string, status string
 }
 
 func (m *TaskManager) FindAllRecurringTasks(options map[string]string) ([]Task, error) {
-	rows, err := m.db.Query(sqlFindAllRecurringTasks + findAllOptionsString(options))
+	rows, err := m.db.Query(sqlFindAllRecurringTasks(m.DatabaseTable) + findAllOptionsString(options))
 
 	var result []Task
 	if err != nil {
@@ -227,12 +248,12 @@ func (m *TaskManager) updateTask(t Task) error {
 		t.Timeout = -1
 	}
 
-	_, err := m.db.Exec(sqlUpdateTask, append([]interface{}{t.Id}, rowSqlSourceTask(t)...)...)
+	_, err := m.db.Exec(sqlUpdateTask(m.DatabaseTable), append([]interface{}{t.Id}, rowSqlSourceTask(t)...)...)
 	return err
 }
 
 func (m *TaskManager) deleteTask(id int) error {
-	_, err := m.db.Exec(deleteTaskSQL, id)
+	_, err := m.db.Exec(sqlDeleteTask(m.DatabaseTable), id)
 	return err
 }
 
