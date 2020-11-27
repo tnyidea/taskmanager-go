@@ -31,14 +31,12 @@ func (w *TaskWorkflow) GetTaskManager() *TaskManager {
 	return w.Context.Value(ContextKey("taskManager")).(*TaskManager)
 }
 
-func (w *TaskWorkflow) GetTask() *Task {
-	return w.Context.Value(ContextKey("task")).(*Task)
+func (w *TaskWorkflow) GetTask() Task {
+	return w.Context.Value(ContextKey("task")).(Task)
 }
 
-func (w *TaskWorkflow) UpdateTask(t *Task) {
-	ctx := w.Context
-	ctx = context.WithValue(ctx, ContextKey("task"), t)
-	w.Context = ctx
+func (w *TaskWorkflow) UpdateTask(t Task) {
+	w.Context = context.WithValue(w.Context, ContextKey("task"), t)
 }
 
 func DefaultTaskWorkflow(ctx context.Context) *TaskWorkflow {

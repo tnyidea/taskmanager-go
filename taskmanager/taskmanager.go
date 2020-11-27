@@ -59,6 +59,12 @@ func (m *TaskManager) Close() {
 	_ = m.db.Close()
 }
 
+func (m *TaskManager) ValidTaskType(t string) bool {
+	workflows := m.Context.Value(ContextKey("taskWorkflows")).(map[string]TaskWorkflowDefinition)
+	_, defined := workflows[t]
+	return defined
+}
+
 func (m *TaskManager) StartTask(id int) error {
 	task, err := m.FindTask(id)
 	if err != nil {
@@ -156,8 +162,8 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 				return errors.New(errMessage)
 			}
 
-			// Update the current version of the task
-			w.UpdateTask(&t)
+			// Update the cached version of the task
+			w.UpdateTask(t)
 
 			statusHandlers := w.Handlers[nextStatus]
 			for j := range statusHandlers {
