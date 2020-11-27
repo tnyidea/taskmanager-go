@@ -9,9 +9,10 @@ create table task_manager
     -- Task Metadata
     task_group   varchar(20),
     task_type    varchar(20),
+    recurring    boolean,
     status       varchar(20),
-    message      varchar(512),
     timeout      integer,
+    message      varchar(512),
     properties   bytea,
 
     -- Record Timestamps

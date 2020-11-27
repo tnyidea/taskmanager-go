@@ -14,9 +14,10 @@ type Task struct {
 	// Task Metadata
 	TaskGroup  string `json:"taskGroup"`
 	TaskType   string `json:"taskType"`
+	Recurring  bool   `json:"recurring"`
 	Status     string `json:"status"`
-	Message    string `json:"message"`
 	Timeout    int    `json:"timeout"`
+	Message    string `json:"message"`
 	Properties []byte `json:"properties"`
 }
 

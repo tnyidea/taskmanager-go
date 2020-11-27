@@ -1,18 +1,19 @@
 package taskmanager
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 )
 
 type TaskWorkflow struct {
-	ContextProperties interface{}                      `json:"contextProperties"`
-	TaskManager       TaskManager                      `json:"taskManager"`
-	Task              Task                             `json:"task"`
-	Sequence          []string                         `json:"sequence"`
-	Timeouts          map[string]int                   `json:"timeouts"`
-	Handlers          map[string][]TaskWorkflowHandler `json:"handlers"`
+	Context  context.Context                  `json:"context"`
+	Sequence []string                         `json:"sequence"`
+	Timeouts map[string]int                   `json:"timeouts"`
+	Handlers map[string][]TaskWorkflowHandler `json:"handlers"`
 }
+
+type ContextKey string
 
 type TaskWorkflowHandler func(w *TaskWorkflow) error
 
@@ -26,10 +27,23 @@ func (w *TaskWorkflow) String() string {
 	return string(b)
 }
 
-func DefaultTaskWorkflow(t TaskManager, properties interface{}) *TaskWorkflow {
+func (w *TaskWorkflow) GetTaskManager() *TaskManager {
+	return w.Context.Value(ContextKey("taskManager")).(*TaskManager)
+}
+
+func (w *TaskWorkflow) GetTask() *Task {
+	return w.Context.Value(ContextKey("task")).(*Task)
+}
+
+func (w *TaskWorkflow) UpdateTask(t *Task) {
+	ctx := w.Context
+	ctx = context.WithValue(ctx, ContextKey("task"), t)
+	w.Context = ctx
+}
+
+func DefaultTaskWorkflow(ctx context.Context) *TaskWorkflow {
 	return &TaskWorkflow{
-		ContextProperties: properties,
-		TaskManager:       t,
+		Context: ctx,
 		Sequence: []string{
 			"Created", "Active", "Waiting", "Complete",
 		},
@@ -76,26 +90,26 @@ func WaitForNotify(w *TaskWorkflow) error {
 }
 
 func defaultCreateLogMessage(w *TaskWorkflow) error {
-	log.Println("Task Created: task", w.Task.Id, "has been created")
+	log.Println("Task Created: task", w.GetTask().Id, "has been created")
 	return nil
 }
 
 func defaultActiveLogMessage(w *TaskWorkflow) error {
-	log.Println("Task Active: task", w.Task.Id, "is active")
+	log.Println("Task Active: task", w.GetTask().Id, "is active")
 	return nil
 }
 
 func defaultWaitingLogMessage(w *TaskWorkflow) error {
-	log.Println("Task Waiting: task", w.Task.Id, "is waiting")
+	log.Println("Task Waiting: task", w.GetTask().Id, "is waiting")
 	return nil
 }
 
 func defaultCompleteLogMessage(w *TaskWorkflow) error {
-	log.Println("Task Complete: task", w.Task.Id, "is complete")
+	log.Println("Task Complete: task", w.GetTask().Id, "is complete")
 	return nil
 }
 
 func defaultErrorLogMessage(w *TaskWorkflow) error {
-	log.Println("Task Error: task", w.Task.Id, "has an error")
+	log.Println("Task Error: task", w.GetTask().Id, "has an error")
 	return nil
 }

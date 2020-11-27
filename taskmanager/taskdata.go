@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-type pqTaskManager struct {
+type sqlTask struct {
 	// Primary Key
 	Id sql.NullInt32 `sql:"id"`
 
@@ -15,37 +15,39 @@ type pqTaskManager struct {
 	// Task Metadata
 	TaskGroup  sql.NullString `sql:"task_group"`
 	TaskType   sql.NullString `sql:"task_type"`
+	Recurring  sql.NullBool   `sql:"recurring"`
 	Status     sql.NullString `sql:"status"`
-	Message    sql.NullString `sql:"message"`
 	Timeout    sql.NullInt32  `sql:"timeout"`
+	Message    sql.NullString `sql:"message"`
 	Properties []byte         `sql:"properties"`
 }
 
-func (t *pqTaskManager) task() Task {
+func (t *sqlTask) task() Task {
 	task := Task{
 		Id:          int(t.Id.Int32),
 		ReferenceId: t.ReferenceId.String,
 		TaskGroup:   t.TaskGroup.String,
 		TaskType:    t.TaskType.String,
+		Recurring:   t.Recurring.Bool,
 		Status:      t.Status.String,
-		Message:     t.Message.String,
 		Timeout:     int(t.Timeout.Int32),
+		Message:     t.Message.String,
 		Properties:  t.Properties,
 	}
 
 	return task
 }
 
-func rowSourceTask(t Task) []interface{} {
+func rowSqlSourceTask(t Task) []interface{} {
 	return []interface{}{
 		t.ReferenceId,
 		t.TaskGroup, t.TaskType,
-		t.Status, t.Message, t.Timeout,
+		t.Recurring, t.Status, t.Timeout, t.Message,
 		t.Properties,
 	}
 }
 
-func (t *pqTaskManager) rowDestination() []interface{} {
+func (t *sqlTask) rowSqlDestination() []interface{} {
 	return []interface{}{
 		&t.Id, &t.ReferenceId,
 		&t.TaskGroup, &t.TaskType,
@@ -54,48 +56,47 @@ func (t *pqTaskManager) rowDestination() []interface{} {
 	}
 }
 
-const columnsTaskManager = `
+const sqlTaskTable = "task_manager"
+const sqlTaskColumns = `
     reference_id,
     task_group, task_type,
-    status, message, timeout,
+    recurring, status, timeout, message,
     properties`
 
-const createTaskSQL = `
-    INSERT INTO task_manager (` + columnsTaskManager + `)
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+const sqlCreateTask = `
+    INSERT INTO ` + sqlTaskTable +
+	` (` + sqlTaskColumns + `)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING id`
 
-const updateTaskSQL = `
-    UPDATE task_manager
-    SET (` + columnsTaskManager + `) =
-    ($2, $3, $4, $5, $6, $7, $8)
+const sqlUpdateTask = `
+    UPDATE ` + sqlTaskTable + `
+    SET (` + sqlTaskColumns + `) =
+    ($2, $3, $4, $5, $6, $7, $8, $9)
     WHERE id = $1`
 
-const countTasksSQL = `
+const sqlCountAllTasks = `
     SELECT count(id)
-    FROM task_manager`
+    FROM ` + sqlTaskTable
 
-const findTaskSQL = `
-    SELECT id, ` + columnsTaskManager + `
-    FROM task_manager
-    WHERE id = $1`
+const sqlFindAllTasks = `
+    SELECT id, ` + sqlTaskColumns + `
+    FROM ` + sqlTaskTable
 
-const findAllTasksSQL = `
-    SELECT id, ` + columnsTaskManager + `
-    FROM task_manager`
+const sqlFindTask = sqlFindAllTasks +
+	" WHERE id = $1"
 
-const findAllTasksByGroupAndStatusSQL = `
-    SELECT id, ` + columnsTaskManager + `
-    FROM task_manager
-    WHERE task_group = $1 AND status = $2`
+const sqlFindAllTasksByGroupAndStatus = sqlFindAllTasks +
+	" WHERE task_group = $1 AND status = $2"
 
-const findAllTasksByTypeAndStatusSQL = `
-    SELECT id, ` + columnsTaskManager + `
-    FROM task_manager
-    WHERE task_type = $1 AND status = $2`
+const sqlFindAllTasksByTypeAndStatus = sqlFindAllTasks +
+	" WHERE task_type = $1 AND status = $2"
+
+const sqlFindAllRecurringTasks = sqlFindAllTasks +
+	" WHERE recurring IS true"
 
 const deleteTaskSQL = `
-    DELETE FROM task_manager
+    DELETE FROM ` + sqlTaskTable + `
     WHERE id = $1`
 
 func (m *TaskManager) CreateTask(t Task) (Task, error) {
@@ -105,7 +106,7 @@ func (m *TaskManager) CreateTask(t Task) (Task, error) {
 	t.Status = "Created"
 
 	var id int
-	row := m.db.QueryRow(createTaskSQL, rowSourceTask(t)...)
+	row := m.db.QueryRow(sqlCreateTask, rowSqlSourceTask(t)...)
 	err := row.Scan(&id)
 	if err != nil {
 		return Task{}, err
@@ -116,7 +117,7 @@ func (m *TaskManager) CreateTask(t Task) (Task, error) {
 }
 
 func (m *TaskManager) CountAllTasks() (int, error) {
-	row := m.db.QueryRow(countTasksSQL)
+	row := m.db.QueryRow(sqlCountAllTasks)
 
 	var count int
 	err := row.Scan(&count)
@@ -126,28 +127,16 @@ func (m *TaskManager) CountAllTasks() (int, error) {
 	return count, nil
 }
 
-func (m *TaskManager) FindTask(id int) (Task, error) {
-	row := m.db.QueryRow(findTaskSQL, id)
-
-	var t pqTaskManager
-	err := row.Scan(t.rowDestination()...)
-	if err != nil {
-		return Task{}, err
-	}
-	return t.task(), nil
-}
-
 func (m *TaskManager) FindAllTasks(options map[string]string) ([]Task, error) {
-	queryOptions, err := findAllOptionsString(options)
-	rows, err := m.db.Query(findAllTasksSQL + queryOptions)
+	rows, err := m.db.Query(sqlFindAllTasks + findAllOptionsString(options))
 
 	var result []Task
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
-		var t pqTaskManager
-		err := rows.Scan(t.rowDestination()...)
+		var t sqlTask
+		err := rows.Scan(t.rowSqlDestination()...)
 		if err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -159,17 +148,27 @@ func (m *TaskManager) FindAllTasks(options map[string]string) ([]Task, error) {
 	return result, nil
 }
 
+func (m *TaskManager) FindTask(id int) (Task, error) {
+	row := m.db.QueryRow(sqlFindTask, id)
+
+	var t sqlTask
+	err := row.Scan(t.rowSqlDestination()...)
+	if err != nil {
+		return Task{}, err
+	}
+	return t.task(), nil
+}
+
 func (m *TaskManager) FindAllTasksByGroupAndStatus(taskGroup string, status string, options map[string]string) ([]Task, error) {
-	queryOptions, err := findAllOptionsString(options)
-	rows, err := m.db.Query(findAllTasksByGroupAndStatusSQL+queryOptions, taskGroup, status)
+	rows, err := m.db.Query(sqlFindAllTasksByGroupAndStatus+findAllOptionsString(options), taskGroup, status)
 
 	var result []Task
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
-		var t pqTaskManager
-		err := rows.Scan(t.rowDestination()...)
+		var t sqlTask
+		err := rows.Scan(t.rowSqlDestination()...)
 		if err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -182,16 +181,36 @@ func (m *TaskManager) FindAllTasksByGroupAndStatus(taskGroup string, status stri
 }
 
 func (m *TaskManager) FindAllTasksByTypeAndStatus(taskType string, status string, options map[string]string) ([]Task, error) {
-	queryOptions, err := findAllOptionsString(options)
-	rows, err := m.db.Query(findAllTasksByTypeAndStatusSQL+queryOptions, taskType, status)
+	rows, err := m.db.Query(sqlFindAllTasksByTypeAndStatus+findAllOptionsString(options), taskType, status)
 
 	var result []Task
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
-		var t pqTaskManager
-		err := rows.Scan(t.rowDestination()...)
+		var t sqlTask
+		err := rows.Scan(t.rowSqlDestination()...)
+		if err != nil {
+			_ = rows.Close()
+			return nil, err
+		}
+		result = append(result, t.task())
+	}
+	_ = rows.Close()
+
+	return result, nil
+}
+
+func (m *TaskManager) FindAllRecurringTasks(options map[string]string) ([]Task, error) {
+	rows, err := m.db.Query(sqlFindAllRecurringTasks + findAllOptionsString(options))
+
+	var result []Task
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var t sqlTask
+		err := rows.Scan(t.rowSqlDestination()...)
 		if err != nil {
 			_ = rows.Close()
 			return nil, err
@@ -208,7 +227,7 @@ func (m *TaskManager) UpdateTask(t Task) error {
 		t.Timeout = -1
 	}
 
-	_, err := m.db.Exec(updateTaskSQL, append([]interface{}{t.Id}, rowSourceTask(t)...)...)
+	_, err := m.db.Exec(sqlUpdateTask, append([]interface{}{t.Id}, rowSqlSourceTask(t)...)...)
 	return err
 }
 
@@ -217,8 +236,7 @@ func (m *TaskManager) DeleteTask(id int) error {
 	return err
 }
 
-func findAllOptionsString(options map[string]string) (string, error) {
-	// TODO This is the best way to do indexes on maps
+func findAllOptionsString(options map[string]string) string {
 	defined := make(map[string]bool)
 	for i := range options {
 		defined[i] = options[i] != ""
@@ -238,11 +256,11 @@ func findAllOptionsString(options map[string]string) (string, error) {
 		if defined["rangeStart"] && defined["rangeEnd"] {
 			rangeStart, err := strconv.Atoi(options["rangeStart"])
 			if err != nil {
-				return "", err
+				return ""
 			}
 			rangeEnd, err := strconv.Atoi(options["rangeEnd"])
 			if err != nil {
-				return "", err
+				return ""
 			}
 
 			limit := rangeEnd - rangeStart
@@ -252,5 +270,5 @@ func findAllOptionsString(options map[string]string) (string, error) {
 		}
 	}
 
-	return filterSQL + sortSQL + rangeSQL, nil
+	return filterSQL + sortSQL + rangeSQL
 }

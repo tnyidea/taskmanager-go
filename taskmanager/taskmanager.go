@@ -1,6 +1,7 @@
 package taskmanager
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"log"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -55,14 +57,9 @@ func (m *TaskManager) Close() {
 }
 
 func (m *TaskManager) StartTask(id int, w *TaskWorkflow) error {
-	if w.ContextProperties == nil {
-		errMessage := "workflow context properties is undefined"
-		return errors.New(errMessage)
-	}
 	task, err := m.FindTask(id)
 	if err != nil {
-		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before starting", id)
-		return errors.New(errMessage)
+		return errors.New("error finding task ID " + strconv.Itoa(id) + ".  Task must be created before starting")
 	}
 
 	if task.Status != "Created" {
@@ -71,8 +68,11 @@ func (m *TaskManager) StartTask(id int, w *TaskWorkflow) error {
 		return errors.New(errMessage)
 	}
 
-	// Cache the Task Information in the workflow
-	w.Task = task
+	// Create a Task Context
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContextKey("taskManager"), m)
+	ctx = context.WithValue(ctx, ContextKey("task"), task)
+	w.Context = ctx
 
 	statusHandlers := w.Handlers["Created"]
 	for i := range statusHandlers {
@@ -102,7 +102,7 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w *TaskW
 		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", id)
 		return errors.New(errMessage)
 	}
-	w.Task = t
+	w.UpdateTask(&t)
 
 	switch result {
 	case "success":
@@ -135,7 +135,7 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 			t.Timeout = w.Timeouts[nextStatus]
 
 			// Update the task manager with the cached task properties
-			t.Properties = w.Task.Properties
+			t.Properties = w.GetTask().Properties
 
 			err = m.UpdateTask(t)
 			if err != nil {
@@ -144,8 +144,8 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 				return errors.New(errMessage)
 			}
 
-			// Cache the current version of the task
-			w.Task = t
+			// Update the current version of the task
+			w.UpdateTask(&t)
 
 			statusHandlers := w.Handlers[nextStatus]
 			for j := range statusHandlers {
@@ -175,7 +175,6 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 	return nil
 }
 
-// TODO make this more strict
 func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
 	log.Println("Handling Task ", t.Id, "Error:", message)
 	t.Status = "Error"
