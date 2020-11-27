@@ -15,10 +15,12 @@ import (
 )
 
 type TaskManager struct {
-	DataUrl string
+	Context context.Context
 	db      *sql.DB
 
-	TaskTypeWorkflows map[string]TaskWorkflowDefinition
+	//	DataUrl string
+	//	TaskTypeWorkflows map[string]TaskWorkflowDefinition
+
 }
 
 func (m *TaskManager) Bytes() []byte {
@@ -33,16 +35,17 @@ func (m *TaskManager) String() string {
 
 type TaskWorkflowDefinition func(ctx context.Context) *TaskWorkflow
 
-func New(dataUrl string, taskTypeWorkflows map[string]TaskWorkflowDefinition) TaskManager {
+func New(ctx context.Context, dataUrl string, workflows map[string]TaskWorkflowDefinition) TaskManager {
+	ctx = context.WithValue(ctx, ContextKey("taskManagerDataUrl"), dataUrl)
+	ctx = context.WithValue(ctx, ContextKey("taskWorkflows"), workflows)
 	return TaskManager{
-		DataUrl:           dataUrl,
-		TaskTypeWorkflows: taskTypeWorkflows,
+		Context: ctx,
 	}
 }
 
 func (m *TaskManager) Open() error {
 	// Open Connection
-	db, err := sql.Open("postgres", m.DataUrl)
+	db, err := sql.Open("postgres", m.Context.Value(ContextKey("taskManagerDataUrl")).(string))
 	if err != nil {
 		return err
 	}
@@ -56,23 +59,25 @@ func (m *TaskManager) Close() {
 	_ = m.db.Close()
 }
 
-func (m *TaskManager) StartTask(id int, w *TaskWorkflow) error {
+func (m *TaskManager) StartTask(id int) error {
 	task, err := m.FindTask(id)
 	if err != nil {
 		return errors.New("error finding task ID " + strconv.Itoa(id) + ".  Task must be created before starting")
 	}
+
+	// Create a Task Workflow Context
+	ctx := m.Context
+	ctx = context.WithValue(ctx, ContextKey("taskManager"), m)
+	ctx = context.WithValue(ctx, ContextKey("task"), task)
+
+	workflows := m.Context.Value(ContextKey("taskWorkflows")).(map[string]TaskWorkflowDefinition)
+	w := workflows[task.TaskType](ctx)
 
 	if task.Status != "Created" {
 		errMessage := fmt.Sprintf("invalid task state for StartTask(): %v.  Task must be in created state before startng", task.Status)
 		m.handleTaskError(task, w, errMessage)
 		return errors.New(errMessage)
 	}
-
-	// Create a Task Context
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, ContextKey("taskManager"), m)
-	ctx = context.WithValue(ctx, ContextKey("task"), task)
-	w.Context = ctx
 
 	statusHandlers := w.Handlers["Created"]
 	for i := range statusHandlers {
@@ -96,13 +101,20 @@ func (m *TaskManager) StartTask(id int, w *TaskWorkflow) error {
 	return nil
 }
 
-func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, w *TaskWorkflow) error {
+func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string) error {
 	t, err := m.FindTask(id)
 	if err != nil {
 		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", id)
 		return errors.New(errMessage)
 	}
-	w.UpdateTask(&t)
+
+	// Create a Task Workflow Context
+	ctx := m.Context
+	ctx = context.WithValue(ctx, ContextKey("taskManager"), m)
+	ctx = context.WithValue(ctx, ContextKey("task"), t)
+
+	workflows := m.Context.Value(ContextKey("taskWorkflows")).(map[string]TaskWorkflowDefinition)
+	w := workflows[t.TaskType](ctx)
 
 	switch result {
 	case "success":

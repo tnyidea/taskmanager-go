@@ -1,16 +1,14 @@
 package test
 
 import (
+	"context"
 	"database/sql"
 	"github.com/tnyidea/taskmanager-go/taskmanager"
 	"log"
 	"testing"
 )
 
-var testTaskManager = taskmanager.New(TaskManagerTestDataUrl,
-	map[string]taskmanager.TaskWorkflowDefinition{
-		"TaskType": taskmanager.DefaultTaskWorkflow,
-	})
+var testTaskManager taskmanager.TaskManager
 
 var testTask = taskmanager.Task{
 	Id:          0,
@@ -27,7 +25,7 @@ var testContextProperties = make(map[string]string)
 func TestDropTableTaskManager(t *testing.T) {
 	err := dropTableTaskManager()
 	if err != nil {
-		log.Print("ignoring DropTableTaskManagerBlue error:", err)
+		log.Print("ignoring dropTableTaskManager error:", err)
 	}
 }
 
@@ -37,6 +35,14 @@ func TestCreateTableTaskManager(t *testing.T) {
 		log.Println(err)
 		t.FailNow()
 	}
+}
+
+func TestInitializeTaskManager(t *testing.T) {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, taskmanager.ContextKey("testContextProperties"), testContextProperties)
+	testTaskManager = taskmanager.New(ctx, TaskManagerTestDataUrl, map[string]taskmanager.TaskWorkflowDefinition{
+		"TaskType": taskmanager.DefaultTaskWorkflow,
+	})
 }
 
 func TestCreateAndFindTask(t *testing.T) {
@@ -233,7 +239,7 @@ func TestCreateAndStartTask(t *testing.T) {
 	}
 	id := task.Id
 
-	err = m.StartTask(id, m.TaskTypeWorkflows[task.TaskType](m, testContextProperties))
+	err = m.StartTask(id)
 	if err != nil {
 		log.Println("taskmanager.StartTask:", err)
 		t.FailNow()
@@ -275,7 +281,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 	}
 	log.Println(&task)
 
-	err = m.NotifyTaskWaitStatusResult(task.Id, "success", m.TaskTypeWorkflows[task.TaskType](m, testContextProperties))
+	err = m.NotifyTaskWaitStatusResult(task.Id, "success")
 	if err != nil {
 		log.Println("taskmanager.UpdateTaskStatus:", err)
 		t.FailNow()
