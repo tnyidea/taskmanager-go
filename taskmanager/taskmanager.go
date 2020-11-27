@@ -130,7 +130,7 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string) error {
 		m.handleTaskError(t, w, "Error")
 		return nil
 	default:
-		errMessage := fmt.Sprintf("invalid result type %v", result)
+		errMessage := "invalid result type " + result
 		log.Println(errMessage)
 		return errors.New(errMessage)
 	}
@@ -155,7 +155,7 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 			// Update the task manager with the cached task properties
 			t.Properties = w.GetTask().Properties
 
-			err = m.UpdateTask(t)
+			err = m.updateTask(t)
 			if err != nil {
 				errMessage := fmt.Sprintf("error updating task ID %d with status '%v' to new status '%v'", t.Id, status, nextStatus)
 				m.handleTaskError(t, w, errMessage)
@@ -198,7 +198,7 @@ func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
 	t.Status = "Error"
 	t.Message = message
 
-	err := m.UpdateTask(t) // No need to handle error from Update (other than log it) since we are already here
+	err := m.updateTask(t) // No need to handle error from Update (other than log it) since we are already here
 	if err != nil {
 		log.Println(err)
 	}

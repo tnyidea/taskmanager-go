@@ -222,7 +222,7 @@ func (m *TaskManager) FindAllRecurringTasks(options map[string]string) ([]Task, 
 	return result, nil
 }
 
-func (m *TaskManager) UpdateTask(t Task) error {
+func (m *TaskManager) updateTask(t Task) error {
 	if t.Timeout < 1 {
 		t.Timeout = -1
 	}
@@ -231,7 +231,7 @@ func (m *TaskManager) UpdateTask(t Task) error {
 	return err
 }
 
-func (m *TaskManager) DeleteTask(id int) error {
+func (m *TaskManager) deleteTask(id int) error {
 	_, err := m.db.Exec(deleteTaskSQL, id)
 	return err
 }
