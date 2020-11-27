@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"database/sql"
 	"github.com/tnyidea/taskmanager-go/taskmanager"
 	"log"
 	"testing"
@@ -42,6 +43,147 @@ func TestInitializeTaskManager(t *testing.T) {
 	testTaskManager = taskmanager.New(ctx, TaskManagerTestDataUrl, map[string]taskmanager.TaskWorkflowDefinition{
 		"TaskType": taskmanager.DefaultTaskWorkflow,
 	})
+}
+
+func TestFindAllTasks(t *testing.T) {
+	m := testTaskManager
+	err := m.Open()
+	if err != nil {
+		log.Println(err)
+		m.Close()
+		t.FailNow()
+	}
+
+	tasks, err := m.FindAllTasks(nil)
+	if err != nil {
+		log.Println(err)
+		m.Close()
+		t.FailNow()
+	}
+	m.Close()
+
+	count := len(tasks)
+	want := count != 0
+	if !want {
+		log.Println("expected FindAllTasks Count to be != 0: result received:", count)
+		m.Close()
+		t.FailNow()
+	}
+}
+
+func TestUpdateTask(t *testing.T) {
+	m := testTaskManager
+	err := m.Open()
+	if err != nil {
+		log.Println(err)
+		m.Close()
+		t.FailNow()
+	}
+
+	want := testTask
+	want.Id = 1
+	want.TaskType = "DifferentType"
+
+	err = m.UpdateTask(want)
+	if err != nil {
+		log.Println(err)
+		m.Close()
+		t.FailNow()
+	}
+
+	task, err := m.FindTask(want.Id)
+	if err != nil {
+		log.Println(err)
+		m.Close()
+		t.FailNow()
+	}
+	m.Close()
+
+	log.Println(&task)
+	log.Println(&want)
+
+	if task.String() != want.String() {
+		log.Println("expected FindTask result does not match test Task")
+		m.Close()
+		t.FailNow()
+	}
+}
+
+func TestDeleteTask(t *testing.T) {
+	m := testTaskManager
+	err := m.Open()
+	if err != nil {
+		log.Println(err)
+		m.Close()
+		t.FailNow()
+	}
+
+	id := 1
+	err = m.DeleteTask(id)
+	if err != nil {
+		log.Println(err)
+		m.Close()
+		t.FailNow()
+	}
+
+	_, err = m.FindTask(id)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			log.Println(err)
+			m.Close()
+			t.FailNow()
+		}
+	}
+	m.Close()
+}
+
+func TestCreateAndFindNullTask(t *testing.T) {
+	m := testTaskManager
+	err := m.Open()
+	if err != nil {
+		log.Println(err)
+		m.Close()
+		t.FailNow()
+	}
+
+	nullTask := taskmanager.Task{
+		TaskType:   "NullTask",
+		Properties: []byte("{}"),
+	}
+
+	task, err := m.CreateTask(nullTask)
+	if err != nil {
+		log.Println("CreateTask:", err)
+		m.Close()
+		t.FailNow()
+	}
+	id := task.Id
+
+	task, err = m.FindTask(id)
+	if err != nil {
+		log.Println("FindTask:", err)
+		m.Close()
+		t.FailNow()
+	}
+
+	want := nullTask
+	want.Id = id
+	want.Status = "Created"
+	want.Timeout = -1
+
+	if task.String() != want.String() {
+		log.Println("expected FindTask result does not match nullTask")
+		m.Close()
+		t.FailNow()
+	}
+
+	err = m.DeleteTask(id)
+	if err != nil {
+		log.Println("DeleteTask:", err)
+		m.Close()
+		t.FailNow()
+	}
+	m.Close()
 }
 
 func TestCreateAndStartTask(t *testing.T) {

@@ -156,7 +156,7 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 			// Update the task manager with the cached task properties
 			t.Properties = w.GetTask().Properties
 
-			err = m.updateTask(t)
+			err = m.UpdateTask(t)
 			if err != nil {
 				errMessage := fmt.Sprintf("error updating task ID %d with status '%v' to new status '%v'", t.Id, status, nextStatus)
 				m.handleTaskError(t, w, errMessage)
@@ -199,7 +199,7 @@ func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
 	t.Status = "Error"
 	t.Message = message
 
-	err := m.updateTask(t) // No need to handle error from Update (other than log it) since we are already here
+	err := m.UpdateTask(t) // No need to handle error from Update (other than log it) since we are already here
 	if err != nil {
 		log.Println(err)
 	}
