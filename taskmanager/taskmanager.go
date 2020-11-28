@@ -76,12 +76,16 @@ func (m *TaskManager) StartTask(id int) error {
 	ctx := m.Context
 	ctx = context.WithValue(ctx, ContextKey("taskManager"), m)
 	ctx = context.WithValue(ctx, ContextKey("task"), task)
+	if task.Recurring {
+		ctx = context.WithValue(ctx, ContextKey("recurringTask"), task)
+	}
 
 	workflows := m.Context.Value(ContextKey("taskWorkflows")).(map[string]TaskWorkflowDefinition)
 	w := workflows[task.TaskType](ctx)
 
 	if task.Status != "Created" {
-		errMessage := fmt.Sprintf("invalid task state for StartTask(): %v.  Task must be in created state before startng", task.Status)
+		errMessage := "invalid task state for StartTask(): " + task.Status +
+			".  Task must be in created state before startng"
 		m.handleTaskError(task, w, errMessage)
 		return errors.New(errMessage)
 	}
@@ -100,7 +104,7 @@ func (m *TaskManager) StartTask(id int) error {
 		err := statusHandlers[i](w)
 		if err != nil {
 			errMessage := fmt.Sprintf("error executing handlers for %v with task %d", i, task.Id)
-			m.handleTaskError(task, w, errMessage)
+			m.handleTaskError(task, w, err.Error())
 			return errors.New(errMessage)
 		}
 	}
@@ -108,7 +112,7 @@ func (m *TaskManager) StartTask(id int) error {
 	return nil
 }
 
-func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string) error {
+func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, message string) error {
 	t, err := m.FindTask(id)
 	if err != nil {
 		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", id)
@@ -127,8 +131,7 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string) error {
 	case "success":
 		return m.incrementTaskStatus(t, w)
 	case "error":
-		// TODO get messaging as part of this
-		m.handleTaskError(t, w, "Error")
+		m.handleTaskError(t, w, message)
 		return nil
 	default:
 		errMessage := "invalid result type " + result
@@ -140,11 +143,20 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string) error {
 func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 	_, err := m.FindTask(t.Id)
 	if err != nil {
-		errMessage := fmt.Sprintf("error finding task ID %d.  Task must be created before executing workflow", t.Id)
+		errMessage := "error finding task ID " + strconv.Itoa(t.Id) + ".  Task must be created before executing workflow"
+		m.handleTaskError(t, w, err.Error())
+		return errors.New(errMessage)
+	}
+
+	// If task status is last in sequence then somehow we got here in error
+	if w.Sequence[len(w.Sequence)-1] == t.Status {
+		errMessage := "invalid task workflow definition: EndWorkflow function expected after '" +
+			t.Status + "' handler execution"
 		m.handleTaskError(t, w, errMessage)
 		return errors.New(errMessage)
 	}
 
+	// Otherwise we are not on the last status, so process
 	for i := range w.Sequence {
 		if w.Sequence[i] == t.Status {
 			status := t.Status
@@ -158,8 +170,8 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 
 			err = m.UpdateTask(t)
 			if err != nil {
-				errMessage := fmt.Sprintf("error updating task ID %d with status '%v' to new status '%v'", t.Id, status, nextStatus)
-				m.handleTaskError(t, w, errMessage)
+				errMessage := "error updating task ID " + strconv.Itoa(t.Id) + " with status '" + status + "' to new status '" + nextStatus + "'"
+				m.handleTaskError(t, w, err.Error())
 				return errors.New(errMessage)
 			}
 
@@ -170,6 +182,10 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 			for j := range statusHandlers {
 				handlerName := runtime.FuncForPC(reflect.ValueOf(statusHandlers[j]).Pointer()).Name()
 				if strings.HasSuffix(handlerName, "EndWorkflow") {
+					// Reset the task if it is a recurring task
+					if t.Recurring {
+						resetRecurringTask(t, w)
+					}
 					break
 				}
 				if strings.HasSuffix(handlerName, "NextStatus") {
@@ -181,9 +197,10 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 				}
 				err := statusHandlers[j](w)
 				if err != nil {
-					errMessage := fmt.Sprintf("error executing handlers for status '%v' with task ID %d", nextStatus, t.Id)
+					errMessage := "error executing handlers for status '" + nextStatus +
+						"' with task ID " + strconv.Itoa(t.Id)
 					t.Message = err.Error()
-					m.handleTaskError(t, w, errMessage)
+					m.handleTaskError(t, w, err.Error())
 					return errors.New(errMessage)
 				}
 			}
@@ -207,5 +224,20 @@ func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
 	errorHandlers := w.Handlers["Error"]
 	for i := range errorHandlers {
 		_ = errorHandlers[i](w)
+	}
+
+	// Reset the task if it is a recurring task
+	if t.Recurring {
+		resetRecurringTask(t, w)
+	}
+}
+
+func resetRecurringTask(t Task, w *TaskWorkflow) {
+	m := w.GetTaskManager()
+	recurringTask := w.Context.Value(ContextKey("recurringTask")).(Task)
+	_, err := m.CreateTask(recurringTask)
+	if err != nil {
+		log.Println("Warning: could not reset recurring task "+
+			strconv.Itoa(t.Id)+":", err)
 	}
 }

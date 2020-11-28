@@ -244,7 +244,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 	}
 	log.Println(&task)
 
-	err = m.NotifyTaskWaitStatusResult(task.Id, "success")
+	err = m.NotifyTaskWaitStatusResult(task.Id, "success", "")
 	if err != nil {
 		log.Println("taskmanager.UpdateTaskStatus:", err)
 		t.FailNow()
