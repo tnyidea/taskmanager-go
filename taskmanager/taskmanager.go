@@ -72,6 +72,10 @@ func (m *TaskManager) StartTask(id int) error {
 		return errors.New("error starting task while finding task ID " + strconv.Itoa(id) + ": " + err.Error())
 	}
 
+	if !m.ValidTaskType(task.TaskType) {
+		return errors.New("error starting task: invalid task type: " + task.TaskType)
+	}
+
 	// Create a Task Workflow Context
 	ctx := m.Context
 	ctx = context.WithValue(ctx, ContextKey("taskManager"), m)

@@ -2,7 +2,6 @@ package taskmanager
 
 import (
 	"database/sql"
-	"errors"
 	"strconv"
 )
 
@@ -126,10 +125,6 @@ func (m *TaskManager) CreateTask(t Task) (Task, error) {
 		t.Timeout = -1
 	}
 	t.Status = "Created"
-
-	if !m.ValidTaskType(t.TaskType) {
-		return Task{}, errors.New("invalid task type: " + t.TaskType)
-	}
 
 	var id int
 	row := m.db.QueryRow(sqlCreateTask(m.DatabaseTable), rowSqlSourceTask(t)...)
