@@ -52,7 +52,7 @@ func (t *sqlTask) rowSqlDestination() []interface{} {
 	return []interface{}{
 		&t.Id, &t.ReferenceId,
 		&t.TaskGroup, &t.TaskType,
-		&t.Recurring, &t.Status, &t.Message, &t.Timeout,
+		&t.Recurring, &t.Status, &t.Timeout, &t.Message,
 		&t.Properties,
 	}
 }
