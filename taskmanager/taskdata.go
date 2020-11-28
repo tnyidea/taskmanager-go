@@ -2,6 +2,7 @@ package taskmanager
 
 import (
 	"database/sql"
+	"log"
 	"strconv"
 )
 
@@ -170,6 +171,7 @@ func (m *TaskManager) FindAllTasks(options map[string]string) ([]Task, error) {
 }
 
 func (m *TaskManager) FindTask(id int) (Task, error) {
+	log.Println(sqlFindTask(m.DatabaseTable))
 	row := m.db.QueryRow(sqlFindTask(m.DatabaseTable), id)
 
 	var t sqlTask

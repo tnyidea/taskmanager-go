@@ -69,7 +69,7 @@ func (m *TaskManager) ValidTaskType(t string) bool {
 func (m *TaskManager) StartTask(id int) error {
 	task, err := m.FindTask(id)
 	if err != nil {
-		return errors.New("error finding task ID " + strconv.Itoa(id) + ".  Task must be created before starting")
+		return errors.New("error starting task while finding task ID " + strconv.Itoa(id) + ": " + err.Error())
 	}
 
 	// Create a Task Workflow Context
