@@ -95,10 +95,8 @@ func (m *TaskManager) StartTask(id int) error {
 	}
 
 	statusHandlers := w.Handlers["Created"]
-	log.Println(statusHandlers)
 	for i := range statusHandlers {
 		handlerName := runtime.FuncForPC(reflect.ValueOf(statusHandlers[i]).Pointer()).Name()
-		log.Println(handlerName)
 		if strings.HasSuffix(handlerName, "NextStatus") {
 			err := m.incrementTaskStatus(task, w)
 			if err != nil {
@@ -147,15 +145,12 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, message 
 }
 
 func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
-	log.Println("Incrementing Task Status for task", t.Id)
 	_, err := m.FindTask(t.Id)
 	if err != nil {
 		errMessage := "error finding task ID " + strconv.Itoa(t.Id) + ".  Task must be created before executing workflow"
 		m.handleTaskError(t, w, err.Error())
 		return errors.New(errMessage)
 	}
-
-	log.Println("Current Task Status is :", t.Status)
 
 	// If task status is last in sequence then somehow we got here in error
 	if w.Sequence[len(w.Sequence)-1] == t.Status {
@@ -165,13 +160,11 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 		return errors.New(errMessage)
 	}
 
-	log.Println("Current status is not last status")
 	// Otherwise we are not on the last status, so process
 	for i := range w.Sequence {
 		if w.Sequence[i] == t.Status {
 			status := t.Status
 			nextStatus := w.Sequence[i+1]
-			log.Println("Found next status of:", nextStatus)
 
 			t.Status = nextStatus
 			t.Timeout = w.Timeouts[nextStatus]
@@ -190,7 +183,6 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 			w.UpdateTask(t)
 
 			statusHandlers := w.Handlers[nextStatus]
-			log.Println("executing next statusHandlers...", statusHandlers)
 			for j := range statusHandlers {
 				handlerName := runtime.FuncForPC(reflect.ValueOf(statusHandlers[j]).Pointer()).Name()
 				if strings.HasSuffix(handlerName, "EndWorkflow") {
@@ -224,7 +216,6 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 }
 
 func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
-	log.Println("Handling Task ", t.Id, "Error:", message)
 	t.Status = "Error"
 	t.Message = message
 

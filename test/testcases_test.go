@@ -50,23 +50,20 @@ func TestFindAllTasks(t *testing.T) {
 	err := m.Open()
 	if err != nil {
 		log.Println(err)
-		m.Close()
 		t.FailNow()
 	}
+	defer m.Close()
 
 	tasks, err := m.FindAllTasks(nil)
 	if err != nil {
 		log.Println(err)
-		m.Close()
 		t.FailNow()
 	}
-	m.Close()
 
 	count := len(tasks)
 	want := count != 0
 	if !want {
 		log.Println("expected FindAllTasks Count to be != 0: result received:", count)
-		m.Close()
 		t.FailNow()
 	}
 }
