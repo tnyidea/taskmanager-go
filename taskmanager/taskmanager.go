@@ -76,6 +76,13 @@ func (m *TaskManager) StartTask(id int) error {
 		return errors.New("error starting task: invalid task type: " + task.TaskType)
 	}
 
+	//if task.Recurring {
+	//	if time.Now().Before(task.CreatedAt.Add(time.Duration(task.Timeout)*time.Second)) {
+	//		log.Println("cannot start task: recurring task " +strconv.Itoa(task.Id) + " has not timed out for next execution")
+	//		return nil
+	//	}
+	//}
+
 	// Create a Task Workflow Context
 	ctx := m.Context
 	ctx = context.WithValue(ctx, ContextKey("taskManager"), m)
@@ -223,6 +230,8 @@ func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
 	if err != nil {
 		log.Println(err)
 	}
+
+	w.UpdateTask(t)
 
 	errorHandlers := w.Handlers["Error"]
 	for i := range errorHandlers {
