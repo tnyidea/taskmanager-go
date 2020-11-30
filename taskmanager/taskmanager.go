@@ -97,7 +97,7 @@ func (m *TaskManager) StartTask(id int) error {
 	if task.Status != "Created" {
 		errMessage := "invalid task state for StartTask(): " + task.Status +
 			".  Task must be in created state before startng"
-		m.handleTaskError(task, w, errMessage)
+		m.handleTaskError(w, errMessage)
 		return errors.New(errMessage)
 	}
 
@@ -105,7 +105,7 @@ func (m *TaskManager) StartTask(id int) error {
 	for i := range statusHandlers {
 		handlerName := runtime.FuncForPC(reflect.ValueOf(statusHandlers[i]).Pointer()).Name()
 		if strings.HasSuffix(handlerName, "NextStatus") {
-			err := m.incrementTaskStatus(task, w)
+			err := m.incrementTaskStatus(w)
 			if err != nil {
 				log.Println(err)
 				return err
@@ -115,7 +115,7 @@ func (m *TaskManager) StartTask(id int) error {
 		err := statusHandlers[i](w)
 		if err != nil {
 			errMessage := "error executing handlers for " + strconv.Itoa(i) + " with task " + strconv.Itoa(task.Id)
-			m.handleTaskError(task, w, err.Error())
+			m.handleTaskError(w, err.Error())
 			return errors.New(errMessage)
 		}
 	}
@@ -140,9 +140,9 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, message 
 
 	switch result {
 	case "success":
-		return m.incrementTaskStatus(t, w)
+		return m.incrementTaskStatus(w)
 	case "error":
-		m.handleTaskError(t, w, message)
+		m.handleTaskError(w, message)
 		return nil
 	default:
 		errMessage := "invalid result type " + result
@@ -151,56 +151,51 @@ func (m *TaskManager) NotifyTaskWaitStatusResult(id int, result string, message 
 	}
 }
 
-func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
-	_, err := m.FindTask(t.Id)
-	if err != nil {
-		errMessage := "error finding task ID " + strconv.Itoa(t.Id) + ".  Task must be created before executing workflow"
-		m.handleTaskError(t, w, err.Error())
-		return errors.New(errMessage)
-	}
+func (m *TaskManager) incrementTaskStatus(w *TaskWorkflow) error {
+	task := w.GetTask()
 
 	// If task status is last in sequence then somehow we got here in error
-	if w.Sequence[len(w.Sequence)-1] == t.Status {
+	if w.Sequence[len(w.Sequence)-1] == task.Status {
 		errMessage := "invalid task workflow definition: EndWorkflow function expected after '" +
-			t.Status + "' handler execution"
-		m.handleTaskError(t, w, errMessage)
+			task.Status + "' handler execution"
+		m.handleTaskError(w, errMessage)
 		return errors.New(errMessage)
 	}
 
 	// Otherwise we are not on the last status, so process
 	for i := range w.Sequence {
-		if w.Sequence[i] == t.Status {
-			status := t.Status
+		if w.Sequence[i] == task.Status {
+			status := task.Status
 			nextStatus := w.Sequence[i+1]
 
-			t.Status = nextStatus
-			t.Timeout = w.Timeouts[nextStatus]
+			// Update the Task State
+			task.Status = nextStatus
+			task.Timeout = w.Timeouts[nextStatus]
 
-			// Update the task manager with the cached task properties
-			t.Properties = w.GetTask().Properties
+			//  - update the cached version of the task
+			w.UpdateTask(task)
 
-			err = m.UpdateTask(t)
+			//  - update the database version of the task
+			err := m.UpdateTask(task)
 			if err != nil {
-				errMessage := "error updating task ID " + strconv.Itoa(t.Id) + " with status '" + status + "' to new status '" + nextStatus + "'"
-				m.handleTaskError(t, w, err.Error())
+				errMessage := "error updating task ID " + strconv.Itoa(task.Id) + " with status '" + status + "' to new status '" + nextStatus + "'"
+				m.handleTaskError(w, err.Error())
 				return errors.New(errMessage)
 			}
 
-			// Update the cached version of the task
-			w.UpdateTask(t)
-
+			// Call the nextStatus Handlers
 			statusHandlers := w.Handlers[nextStatus]
 			for j := range statusHandlers {
 				handlerName := runtime.FuncForPC(reflect.ValueOf(statusHandlers[j]).Pointer()).Name()
 				if strings.HasSuffix(handlerName, "EndWorkflow") {
 					// Reset the task if it is a recurring task
-					if t.Recurring {
-						resetRecurringTask(t, w)
+					if task.Recurring {
+						resetRecurringTask(w)
 					}
 					break
 				}
 				if strings.HasSuffix(handlerName, "NextStatus") {
-					err := m.incrementTaskStatus(t, w)
+					err := m.incrementTaskStatus(w)
 					if err != nil {
 						return err
 					}
@@ -209,9 +204,9 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 				err := statusHandlers[j](w)
 				if err != nil {
 					errMessage := "error executing handlers for status '" + nextStatus +
-						"' with task ID " + strconv.Itoa(t.Id)
-					t.Message = err.Error()
-					m.handleTaskError(t, w, err.Error())
+						"' with task ID " + strconv.Itoa(task.Id)
+					task.Message = err.Error()
+					m.handleTaskError(w, err.Error())
 					return errors.New(errMessage)
 				}
 			}
@@ -222,16 +217,21 @@ func (m *TaskManager) incrementTaskStatus(t Task, w *TaskWorkflow) error {
 	return nil
 }
 
-func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
-	t.Status = "Error"
-	t.Message = message
+func (m *TaskManager) handleTaskError(w *TaskWorkflow, message string) {
+	task := w.GetTask()
 
-	err := m.UpdateTask(t) // No need to handle error from Update (other than log it) since we are already here
+	// Update the Task State
+	task.Status = "Error"
+	task.Message = message
+
+	//  - update the cached version of the task
+	w.UpdateTask(task)
+
+	//  - update the database version of the task
+	err := m.UpdateTask(task) // No need to handle error from Update (other than log it) since we are already here
 	if err != nil {
 		log.Println(err)
 	}
-
-	w.UpdateTask(t)
 
 	errorHandlers := w.Handlers["Error"]
 	for i := range errorHandlers {
@@ -239,19 +239,23 @@ func (m *TaskManager) handleTaskError(t Task, w *TaskWorkflow, message string) {
 	}
 
 	// Reset the task if it is a recurring task
-	if t.Recurring {
-		resetRecurringTask(t, w)
+	if task.Recurring {
+		resetRecurringTask(w)
 	}
 }
 
-func resetRecurringTask(t Task, w *TaskWorkflow) {
-	m := w.GetTaskManager()
+func resetRecurringTask(w *TaskWorkflow) {
+	task := w.GetTask()
+
+	// Update recurring task with cached reference Id
 	recurringTask := w.Context.Value(ContextKey("recurringTask")).(Task)
-	recurringTask.ReferenceId = w.GetTask().ReferenceId
-	log.Println("RECURRING TASK IS:", recurringTask)
+	recurringTask.ReferenceId = task.ReferenceId
+
+	// Create next recurring task
+	m := w.GetTaskManager()
 	_, err := m.CreateTask(recurringTask)
 	if err != nil {
 		log.Println("Warning: could not reset recurring task "+
-			strconv.Itoa(t.Id)+":", err)
+			strconv.Itoa(task.Id)+":", err)
 	}
 }
