@@ -248,6 +248,7 @@ func resetRecurringTask(t Task, w *TaskWorkflow) {
 	m := w.GetTaskManager()
 	recurringTask := w.Context.Value(ContextKey("recurringTask")).(Task)
 	recurringTask.ReferenceId = w.GetTask().ReferenceId
+	log.Println("RECURRING TASK IS:", recurringTask)
 	_, err := m.CreateTask(recurringTask)
 	if err != nil {
 		log.Println("Warning: could not reset recurring task "+
